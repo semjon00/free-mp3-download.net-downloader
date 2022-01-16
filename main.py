@@ -31,8 +31,13 @@ def timestamp(relpath, name, modified):
 # Crawls music library, extracts rel-path, name and modified
 # Only seeks .mp3 format
 def crawl():
-    # Use this to prioritize by folders, words, artists, dates of modification... The possibilities are endless!
+    # Use this to prioritize by folders, words, artists, by date of modification or even bitrate of the original file!
+    # You can also skip a track by giving it a priority of 1e100.
+    # The possibilities are endless!
     def sort_function(obj):
+        # fn = os.path.join(MUSIC_LIBRARY, obj[0], obj[1] + '.mp3')
+        # import mutagen
+        # bitrate = mutagen.File(fn).info.bitrate / 1000
         return -obj[2]
 
     if not os.path.exists(DOWNLOAD_TO):
@@ -136,7 +141,7 @@ def captcha(referer):
 
 # Downloads a flac or mp3 from free-mp3-download.net, by deezer id
 captcha_response = ''
-def download(song_id, name, relpath):
+def download(song_id, name):
     global captcha_response
     encoded_search_querry = base64.b64encode(quote(name, safe="/*()'!").encode('utf-8'), altchars=None).decode('utf-8')
     referer = f"https://free-mp3-download.net/download.php?id={song_id}&q={encoded_search_querry}"
@@ -171,12 +176,12 @@ def download(song_id, name, relpath):
         r = requests.get(url, headers=headers, allow_redirects=True)
     except:
         print(f'❗ Connection broke')
-        return download(song_id, name, relpath)
+        return download(song_id, name)
     if len(r.content) < 50_000:
         print(f'❗ wrong output: {song_id}, {name}, {r.content}')
         if 'Incorrect captcha' in r.content.decode('utf-8'):
             captcha_response = ''
-            return download(song_id, name, relpath)
+            return download(song_id, name)
         return None
     return r.content
 
@@ -196,7 +201,7 @@ if __name__ == '__main__':
     for relpath, name, modified in crawl():
         deezer_id = search(name)
         if deezer_id >= 0:
-            content = download(deezer_id, name, relpath)
+            content = download(deezer_id, name)
             save_file(content, relpath, name)
             timestamp(relpath, name, modified)
         time.sleep(0.5)
